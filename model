@@ -1,0 +1,93 @@
+package main
+
+import "time"
+
+type Employee struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Age       int       `json:"age"`
+	Position string    `json:"position"`
+	CreatedAt time.Time `json:"created_at"`
+}
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"strconv"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Disconnect(ctx)
+
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Connected to MongoDB!")
+
+	router := NewRouter(client)
+
+	log.Fatal(http.ListenAndServe(":8080", router))
+}
+// Handlers
+func GetEmployees(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	var employees []Employee
+	cursor, err := employeeCollection.Find(context.TODO(), bson.D{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(context.TODO())
+
+	for cursor.Next(context.TODO()) {
+		var employee Employee
+		err := cursor.Decode(&employee)
+		if err != nil {
+			log.Fatal(err)
+		}
+		employees = append(employees, employee)
+	}
+
+	json.NewEncoder(w).Encode(employees)
+}
+
+func CreateEmployee(w http.ResponseWriter, r *http.Request) {
+	// Implement your logic here
+}
+
+func GetEmployee(w http.ResponseWriter, r *http.Request) {
+	// Implement your logic here
+}
+
+func UpdateEmployee(w http.ResponseWriter, r *http.Request) {
+	// Implement your logic here
+}
+
+func DeleteEmployee(w http.ResponseWriter, r *http.Request) {
+	// Implement your logic here
+}
+// Router
+func NewRouter(client *mongo.Client) *mux.Router {
+	router := mux.NewRouter()
+	employeeCollection = client.Database("test").Collection("employees")
+
+	router.HandleFunc("/employees", GetEmployees).Methods("GET")
+	router.HandleFunc("/employees", CreateEmployee).Methods("POST")
+	
